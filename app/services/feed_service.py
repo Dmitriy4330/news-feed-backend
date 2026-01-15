@@ -15,21 +15,23 @@ class FeedService:
         self.cache_service = CacheService()
     
     def generate_feed(
-        self, 
-        user_id: uuid.UUID, 
-        limit: int = 20, 
-        cursor: Optional[datetime] = None
+    self, 
+    user_id: uuid.UUID, 
+    limit: int = 20, 
+    cursor: Optional[datetime] = None
     ) -> Tuple[List[Post], Optional[datetime]]:
         """Сгенерировать ленту для пользователя"""
         
         # Проверяем кеш
-        cache_key = f"{user_id}:{cursor.isoformat() if cursor else 'first'}"
+        cache_key = self.cache_service.get_feed_cache_key(
+            str(user_id), 
+            cursor.isoformat() if cursor else None
+        )
         cached = self.cache_service.get_cached_feed(cache_key)
         
         if cached:
             print(f"Используем кешированную ленту для пользователя {user_id}")
             # В реальном приложении здесь нужно десериализовать посты
-            # Для простоты возвращаем пустой список
             return [], None
         
         # Получаем подписки пользователя
@@ -49,11 +51,14 @@ class FeedService:
         next_cursor = posts[-1].created_at if posts else None
         
         # Кешируем результат
-        # В реальном приложении нужно сериализовать посты
-        self.cache_service.cache_feed(cache_key, [])  # 5 минут
+        self.cache_service.cache_feed(
+            str(user_id), 
+            [],  # Здесь должны быть сериализованные посты
+            cursor=cursor.isoformat() if cursor else None
+        )
         
         return posts, next_cursor
-    
+
     def add_post_to_feeds(self, post: Post) -> None:
         """Добавить пост в ленты подписчиков"""
         # В реальном приложении здесь:

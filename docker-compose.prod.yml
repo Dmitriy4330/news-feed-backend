@@ -1,0 +1,90 @@
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: newsfeed-postgres-prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-newsfeed}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newsfeed-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: newsfeed-redis-prod
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - newsfeed-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: newsfeed-nginx-prod
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app_blue
+      - app_green
+    networks:
+      - newsfeed-network
+
+  app_blue:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: news-feed-backend:blue
+    container_name: newsfeed-app-blue
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-newsfeed}
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - newsfeed-network
+
+  app_green:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: news-feed-backend:green
+    container_name: newsfeed-app-green
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-newsfeed}
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - newsfeed-network
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
+networks:
+  newsfeed-network:
+    driver: bridge

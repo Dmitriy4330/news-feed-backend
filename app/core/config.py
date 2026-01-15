@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+from pydantic import ConfigDict  
 
 class Settings(BaseSettings):
     # Database
@@ -16,7 +17,7 @@ class Settings(BaseSettings):
     # App
     DEBUG: bool = True
     
-    class Config:
-        env_file = ".env"
+
+    model_config = ConfigDict(extra='allow', env_file=".env")
 
 settings = Settings()

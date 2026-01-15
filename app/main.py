@@ -4,7 +4,13 @@ from app.core.config import settings
 
 # Импортируем роутеры
 from app.api.endpoints import auth, users, posts, feed, subscriptions
+from fastapi import FastAPI
 
+app = FastAPI()
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 # Создаем экземпляр FastAPI приложения
 app = FastAPI(
     title="News Feed API",
