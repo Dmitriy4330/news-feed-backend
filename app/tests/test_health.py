@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 import sys
 import os
-
+from app.main import app
 # Добавляем путь к проекту
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
