@@ -90,82 +90,82 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/news-feed-backend:${{ github.sha }}
 
   deploy:
-  runs-on: self-hosted
-  needs: build-and-push
-  if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
 
-  steps:
-    - name: Prepare SSH key
-      shell: bash
-      run: |
-        set -euo pipefail
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts
+    steps:
+      - name: Prepare SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts
 
-    - name: Deploy via SSH to VM (localhost) + Blue-Green
-      shell: bash
-      run: |
-        set -euo pipefail
+      - name: Deploy via SSH to VM (localhost) + Blue-Green
+        shell: bash
+        run: |
+          set -euo pipefail
 
-        ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -p 22 \
-          "${{ secrets.SERVER_USER }}@127.0.0.1" << 'EOF'
-        set -euo pipefail
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes -p 22 \
+            "${{ secrets.SERVER_USER }}@127.0.0.1" << 'EOF'
+          set -euo pipefail
 
-        PROJECT_DIR="/pot/news-feed-backend"
-        COMPOSE_FILE="docker-compose.prod.yml"
-        ENV_FILE=".env"
+          PROJECT_DIR="/pot/news-feed-backend"
+          COMPOSE_FILE="docker-compose.prod.yml"
+          ENV_FILE=".env"
 
-        DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
-        DOCKER_TOKEN="${{ secrets.DOCKER_TOKEN }}"
-        NEW_IMAGE="${DOCKER_USERNAME}/news-feed-backend:${{ github.sha }}"
+          DOCKER_USERNAME="${{ secrets.DOCKER_USERNAME }}"
+          DOCKER_TOKEN="${{ secrets.DOCKER_TOKEN }}"
+          NEW_IMAGE="${DOCKER_USERNAME}/news-feed-backend:${{ github.sha }}"
 
-        cd "${PROJECT_DIR}"
+          cd "${PROJECT_DIR}"
 
-        echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+          echo "${DOCKER_TOKEN}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
-        if [ ! -f "${ENV_FILE}" ]; then
-          echo "ERROR: ${ENV_FILE} not found"
-          exit 1
-        fi
-
-        if grep -q "^APP_IMAGE=" "${ENV_FILE}"; then
-          sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${NEW_IMAGE}|" "${ENV_FILE}"
-        else
-          echo "APP_IMAGE=${NEW_IMAGE}" >> "${ENV_FILE}"
-        fi
-
-        docker pull "${NEW_IMAGE}"
-
-        if grep -q "server app_green:8000 backup;" nginx/nginx.conf; then
-          TARGET="app_green"
-          OLD="app_blue"
-        elif grep -q "server app_blue:8000 backup;" nginx/nginx.conf; then
-          TARGET="app_blue"
-          OLD="app_green"
-        else
-          echo "ERROR: Cannot detect active slot"
-          exit 1
-        fi
-
-        docker-compose -f "${COMPOSE_FILE}" up -d --no-build "${TARGET}"
-
-        for i in $(seq 1 30); do
-          if curl -fsS http://localhost/health >/dev/null; then
-            echo "Health OK"
-            break
-          fi
-          sleep 2
-          if [ "$i" -eq 30 ]; then
-            echo "ERROR: Health check failed"
-            docker-compose -f "${COMPOSE_FILE}" logs --tail=200 "${TARGET}" || true
+          if [ ! -f "${ENV_FILE}" ]; then
+            echo "ERROR: ${ENV_FILE} not found"
             exit 1
           fi
-        done
 
-        ./scripts/blue-green-switch.sh
-        docker-compose -f "${COMPOSE_FILE}" stop "${OLD}" || true
+          if grep -q "^APP_IMAGE=" "${ENV_FILE}"; then
+            sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${NEW_IMAGE}|" "${ENV_FILE}"
+          else
+            echo "APP_IMAGE=${NEW_IMAGE}" >> "${ENV_FILE}"
+          fi
 
-        echo "✅ Deploy completed successfully"
-        EOF
+          docker pull "${NEW_IMAGE}"
+
+          if grep -q "server app_green:8000 backup;" nginx/nginx.conf; then
+            TARGET="app_green"
+            OLD="app_blue"
+          elif grep -q "server app_blue:8000 backup;" nginx/nginx.conf; then
+            TARGET="app_blue"
+            OLD="app_green"
+          else
+            echo "ERROR: Cannot detect active slot"
+            exit 1
+          fi
+
+          docker-compose -f "${COMPOSE_FILE}" up -d --no-build "${TARGET}"
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost/health >/dev/null; then
+              echo "Health OK"
+              break
+            fi
+            sleep 2
+            if [ "$i" -eq 30 ]; then
+              echo "ERROR: Health check failed"
+              docker-compose -f "${COMPOSE_FILE}" logs --tail=200 "${TARGET}" || true
+              exit 1
+            fi
+          done
+
+          ./scripts/blue-green-switch.sh
+          docker-compose -f "${COMPOSE_FILE}" stop "${OLD}" || true
+
+          echo "✅ Deploy completed successfully"
+          EOF
