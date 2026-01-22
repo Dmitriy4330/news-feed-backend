@@ -2,7 +2,8 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   test:
@@ -22,6 +23,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
+
       redis:
         image: redis:7-alpine
         ports:
@@ -53,6 +55,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
           SECRET_KEY: test
         run: |
+          mkdir -p reports
           pytest -v --junitxml=reports/junit.xml
 
       - name: Upload test reports (JUnit)
@@ -95,7 +98,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Prepare SSH key
+      - name: Prepare SSH key (localhost)
         shell: bash
         run: |
           set -euo pipefail
@@ -146,6 +149,7 @@ jobs:
             OLD="app_green"
           else
             echo "ERROR: Cannot detect active slot"
+            grep -n "server app_" nginx/nginx.conf || true
             exit 1
           fi
 
