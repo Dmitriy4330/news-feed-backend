@@ -51,4 +51,7 @@
 ### Схема 1 — Общая архитектура системы
 <img width="1172" height="282" alt="Архитектура" src="https://github.com/user-attachments/assets/01785170-813f-4483-ac04-3add8668ef40" />
 
+### Схема 2 — Работа ленты
+<img width="121" height="511" alt="Поток работы ленты2" src="https://github.com/user-attachments/assets/82cd7b8f-36e6-4468-ac5c-8d2164067c89" />
+
 
