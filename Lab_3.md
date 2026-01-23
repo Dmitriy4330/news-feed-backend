@@ -49,26 +49,6 @@
 Все взаимодействия между клиентом и сервером происходят по HTTP(S).
 
 ### Схема 1 — Общая архитектура системы
-flowchart LR
-  U[Пользователь\nWeb/Mobile] -->|HTTPS| LB[Load Balancer / Nginx]
-  LB --> API[API Gateway / Backend API]
+<img width="1172" height="282" alt="Архитектура" src="https://github.com/user-attachments/assets/01785170-813f-4483-ac04-3add8668ef40" />
 
-  API --> AUTH[Auth Service]
-  API --> USER[User Service]
-  API --> POST[Post Service]
-  API --> FEED[Feed Service]
-  API --> NOTIF[Notification Service]
-
-  AUTH --> DBU[(PostgreSQL:\nusers, auth)]
-  USER --> DBU
-
-  POST --> DBP[(PostgreSQL:\nposts)]
-  USER --> DBS[(PostgreSQL:\nfollows/subscriptions)]
-
-  FEED --> CACHE[(Redis Cache:\nfeed cache)]
-  FEED --> DBP
-  FEED --> DBS
-
-  POST --> MQ[(Message Queue:\nRabbitMQ/Kafka)]
-  MQ --> NOTIF
 
