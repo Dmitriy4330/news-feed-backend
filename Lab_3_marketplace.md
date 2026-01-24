@@ -104,7 +104,8 @@
 - PRODUCTS(category_id)
 
 ### Схема 1 — Общая архитектура
-<img width="639" height="591" alt="Архитектура1_маркетплейс_без_фона" src="https://github.com/user-attachments/assets/12f4608f-45ee-4e4f-9f04-a5a7f1d3fc58" />
+<img width="639" height="591" alt="Архитектура1_маркетплейс_без_фона" src="https://github.com/user-attachments/assets/b9e0a14e-8f8c-4230-8405-858eec43d3ea" />
+
 
 
 
